@@ -1,0 +1,3 @@
+#!/bin/bash
+export PYTHONPATH=.
+python3 peridio_evk/cli.py "$@"
