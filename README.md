@@ -11,6 +11,17 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Configure Peridio Cloud
+
+* Create an organization or log into an existing organization where you are an administrator
+* Generate a new API key at https://console.peridio.com/settings/api-authentication
+
+Copy and store the following values as they will be necessary in the next step:
+
+* ORGANIZATION_PRN: the PRN of the organization, found in the organization detail view on Periido.
+* ORGANIZATION_NAME: the test organization name.
+* API_KEY: Your user API key that authenticates you to the Admin API.
+
 ### Initialize the EVK and CLI to use a specified organization
 
 ```bash
