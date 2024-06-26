@@ -144,7 +144,7 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
             signing_key_prn = response['signing_keys'][0]['prn']
     else:
         log_error(result.stderr)
-
+    
     log_task(f'Adding Signing Key to CLI Keychain')
     config_file = os.path.join(config_path, 'config.json')
     config = read_json_file(config_file)

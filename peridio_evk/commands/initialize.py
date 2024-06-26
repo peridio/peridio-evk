@@ -34,6 +34,7 @@ def initialize(organization_name, organization_prn, api_key, product_name):
 def do_initialize(organization_name, organization_prn, api_key):
     log_task('Updating CLI and EVK configuration')
     config_path = get_config_path()
+    check_default_cli_config(config_path)
     config_file = os.path.join(config_path, 'config.json')
     config = read_json_file(config_file)
     update_config(config, organization_name)
@@ -81,3 +82,25 @@ def update_evk_config(evk_config, organization_name, organization_prn):
     evk_config['profile'] = organization_name
     evk_config['organization_name'] = organization_name
     evk_config['organization_prn'] = organization_prn
+
+def check_default_cli_config(config_path):
+    default_cli_config = {
+        'version': 1,
+        'profiles': {
+        },
+        'signing_key_pairs': {
+        }
+    }
+
+    default_credentials = {}
+    config_file_path = os.path.join(config_path, 'config.json')
+    credentials_file_path = os.path.join(config_path, 'credentials.json')
+    if not os.path.exists(config_path):
+        log_task(f'Creating CLI Config')
+        os.makedirs(config_path)
+    if not os.path.exists(config_file_path):
+        log_modify_file(config_file_path)
+        write_json_file(config_file_path, default_cli_config)
+    if not os.path.exists(credentials_file_path):
+        log_modify_file(credentials_file_path)
+        write_json_file(credentials_file_path, default_credentials)
