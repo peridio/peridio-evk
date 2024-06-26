@@ -9,6 +9,8 @@ pip install -e .
 pip install -r requirements.txt
 ```
 
+The Peridio CLI binary is required to be installed on your machine, reference [Peridio CLI Installation](https://docs.peridio.com/cli#installation)
+
 ## Usage
 
 ### Configure Peridio Cloud
