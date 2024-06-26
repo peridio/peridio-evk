@@ -1,19 +1,37 @@
 import click
 import os
-from .utils import read_json_file, write_json_file, get_config_path, read_evk_config, get_evk_config_path, peridio_cli
-from .crypto import create_root_ca
-from .log import log_task, log_modify_file, log_info, log_success, log_skip_task
+from utils import *
+from crypto import create_root_ca
+from log import log_task, log_modify_file, log_info, log_skip_task
+from product import do_create_product
+from releases import do_create_artifacts
+from peridio_evk.commands.devices import do_create_device_environments, do_create_device_certificates, do_register_devices, devices
 
 @click.command()
 @click.option('--organization-name', required=True, type=str, help='Name of the organization')
 @click.option('--organization-prn', required=True, type=str, help='PRN of the organization')
 @click.option('--api-key', required=True, type=str, help='API key for authentication')
-def configure(organization_name, organization_prn, api_key):
-    log_task('Configuring EVK')
+@click.option('--product-name', required=False, type=str, default='edge-inference', help='Product Name (Optional)')
+def initialize(organization_name, organization_prn, api_key, product_name):
+    log_task('Initializing EVK')
     log_info(f'Organization Name: {organization_name}')
     log_info(f'Organization PRN: {organization_prn}')
+    log_info(f'Product Name: {product_name}')
     log_info(f'API key: {api_key}')
 
+    if click.confirm('Running this task may take several minutes to complete.\nYou may run this task over again in the case of errors as it will not duplicate data\n\nProceed?', default=False):
+        do_initialize(organization_name, organization_prn, api_key)
+        cohort_prns = do_create_product(product_name)
+        release_cohort = find_dict_by_name(cohort_prns, 'release')
+        release_cohort_prn = release_cohort['prn']
+        do_create_artifacts(organization_prn, release_cohort_prn)
+        do_create_device_environments(devices)
+        updated_devices = do_create_device_certificates(devices, release_cohort['ca'])
+        filtered_devices = filter_dicts(updated_devices, 'tags', ['canary'])
+        do_register_devices(filtered_devices, product_name, release_cohort_prn)
+
+    
+def do_initialize(organization_name, organization_prn, api_key):
     log_task('Updating CLI and EVK configuration')
     config_path = get_config_path()
     config_file = os.path.join(config_path, 'config.json')
@@ -50,7 +68,6 @@ def configure(organization_name, organization_prn, api_key):
     log_task(f'Verifying CLI configuration')
     profile_name = organization_name
     peridio_cli(['peridio', '--profile', profile_name, 'users', 'me'])
-    log_success('EVK configured successfully')
 
 def update_config(config, organization_name):
     if 'profiles' not in config:
@@ -64,4 +81,3 @@ def update_evk_config(evk_config, organization_name, organization_prn):
     evk_config['profile'] = organization_name
     evk_config['organization_name'] = organization_name
     evk_config['organization_prn'] = organization_prn
-

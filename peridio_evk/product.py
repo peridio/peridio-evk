@@ -1,34 +1,29 @@
-import click
 import json
 import os
 import base64
-from .utils import *
-from .log import *
-from .crypto import *
+from utils import *
+from log import *
+from crypto import *
 
-@click.command()
-@click.option('--name', required=True, type=str, help='Name of the product')
-def create_product(name):
+def do_create_product(name):
     log_task('Creating product')
     log_info(f'Product Name: {name}')
 
     evk_config = read_evk_config()
     result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products-v2', 'create', '--name', name, '--organization-prn', evk_config['organization_prn']])
     if result.returncode != 0:
-        response = json.loads(result.stderr.strip())
+        response = json.loads(result.stderr)
         if "has already been taken" in response['data']['params']['name']:
             log_skip_task('Product already exists')
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products-v2', 'list', '--search', f'organization_prn:\'{evk_config['organization_prn']}\' and name:\'{name}\''])
         if result.returncode == 0:
             response = json.loads(result.stdout)
             product_prn = response['products'][0]['prn']
-        else:
-            log_error(result.stderr.strip())
     else:
         response = json.loads(result.stdout)
-        product_prn = response['data']['product']['prn']
+        product_prn = response['product']['prn']
     log_info(f'Product PRN: {product_prn}')
-    create_product_cohorts(product_prn, name)
+    return create_product_cohorts(product_prn, name)
 
 def create_product_cohorts(product_prn, product_name):
     evk_config = read_evk_config()
@@ -39,9 +34,11 @@ def create_product_cohorts(product_prn, product_name):
         ('daily-release', 'This cohort is for devices running daily release builds, which are more stable than debug builds but still updated frequently for testing and validation purposes.'), 
         ('daily-debug', 'This cohort is used for devices that run daily debug builds, typically used by developers for active development and testing.')
     ]
+
+    cohort_prns = []
     for cohort, desc in cohorts:
         log_info(f'Cohort: {cohort}')
-        
+
     for cohort, desc in cohorts:
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'create', '--name', cohort, '--description', desc, '--organization-prn', evk_config['organization_prn'], '--product-prn', product_prn])
         if result.returncode != 0:
@@ -50,13 +47,13 @@ def create_product_cohorts(product_prn, product_name):
             if result.returncode == 0:
                 response = json.loads(result.stdout)
                 cohort_prn = response['cohorts'][0]['prn']
-            else:
-                log_error(result.stderr.strip())
         else:
             response = json.loads(result.stdout)
-            cohort_prn = response['data']['cohort']['prn']
-        create_product_cohort_ca(product_name, cohort, cohort_prn)
-        create_cohort_signing_key(cohort, cohort_prn)
+            cohort_prn = response['cohort']['prn']
+        ca = create_product_cohort_ca(product_name, cohort, cohort_prn)
+        signing_keys = create_cohort_signing_key(cohort, cohort_prn)
+        cohort_prns.append({'name': cohort, 'prn': cohort_prn, 'signing_keys': signing_keys, 'ca': ca})
+    return cohort_prns
     
 def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
     config_path = get_config_path()
@@ -108,6 +105,8 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
             log_error(result.stderr)
     else:
         log_skip_task(f'Intermediate CA Already Registered')
+    
+    return {'certificate': intermediate_ca_cert, 'private_key': intermediate_ca_key}
 
 def create_cohort_signing_key(cohort_name, cohort_prn):
     config_path = get_config_path()
@@ -136,7 +135,7 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
         response = json.loads(result.stdout)
         if response['signing_keys'] == []:
             log_task(f'Registering Binary Signing Key')
-            response = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'create', '--organization-prn', evk_config['organization_prn'], '--value', public_key_raw_encoded, '--name', f'{cohort_name}-signing-key'])
+            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'create', '--organization-prn', evk_config['organization_prn'], '--value', public_key_raw_encoded, '--name', f'{cohort_name}-signing-key'])
             if result.returncode == 0:
                 response = json.loads(result.stdout)
                 signing_key_prn = response['signing_key']['prn']
@@ -151,6 +150,8 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
     config = read_json_file(config_file)
     update_config_signing_key_pairs(config, f'{cohort_name}-signing-key', signing_key_prn, cohort_private_key_pem)
     write_json_file(config_file, config)
+    {'public_key_pem': cohort_public_key_pem, 'private_key_pem': cohort_private_key_pem}
+
 
 def update_config_signing_key_pairs(config, signing_key_pair_name, signing_key_prn, signing_key_private_path):
     if 'signing_key_pairs' not in config:
