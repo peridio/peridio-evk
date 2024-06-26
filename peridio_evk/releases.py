@@ -20,9 +20,9 @@ def do_create_artifacts(organization_prn, cohort_prn):
     bundle_start = do_create_artifacts_bundle(artifacts_start, 'r1001', organization_prn)
     bundle_end = do_create_artifacts_bundle(artifacts_end, 'r1002', organization_prn)
     
-    do_create_release('release-r1001', organization_prn, cohort_prn, bundle_start, '1.1.0', '', False, [])
+    release_from = do_create_release('release-r1001', organization_prn, cohort_prn, bundle_start, '1.1.0', '', False, [])
     do_create_release('release-r1002', organization_prn, cohort_prn, bundle_end, '2.0.0', '~> 1.1', True, ['canary'])
-    
+    return release_from
 
 def do_create_artifacts_bundle(artifacts, bundle_name, organization_prn):
     for artifact in artifacts:
@@ -109,4 +109,13 @@ def do_create_release(release_name, organization_prn, cohort_prn, bundle_prn, ve
         command.append('--phase-tags')
         command.append(f'{' '.join(phase_tags)}')
 
-    peridio_cli(command)
+    result = peridio_cli(command)
+    if result.returncode == 0:
+        response = json.loads(result.stdout)
+        release = response['release']
+    else:
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'releases', 'list', '--search', f'organization_prn:\'{evk_config['organization_prn']}\' and version:\'{version}\''])
+        if result.returncode == 0:
+            response = json.loads(result.stdout)
+            release = response['releases'][0]
+    return release

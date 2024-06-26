@@ -1,33 +1,31 @@
-import struct
-import crc32c
+import uboot
 
-def pack_env(env_dict, size):
+def create_uboot_env(env_vars, env_file_path, env_size):
     """
-    Pack the environment dictionary into a binary format with padding.
-    """
-    # Join the environment variables into a single byte string
-    env_data = '\0'.join(f'{k}={v}' for k, v in env_dict.items()).encode('ascii') + b'\0\0'
-    
-    # Check if the packed environment is too large
-    if len(env_data) > size:
-        raise ValueError("Environment data is too large")
-    
-    # Pad the environment data to the specified size
-    return env_data.ljust(size, b'\0')
+    Create a U-Boot environment file with a valid CRC using the uboot Python module and specify the environment size.
 
-def create_env_file(env_dict, size, file_path):
+    Parameters:
+    env_vars (dict): A dictionary of environment variables.
+    env_file_path (str): The path where the environment file will be saved.
+    env_size (int): The desired size of the environment file in bytes.
     """
-    Create a U-Boot environment and write it to a file.
-    """
-    # Pack the environment dictionary into a byte string
-    env_data = pack_env(env_dict, size - 4)  # 4 bytes for the CRC
-    
-    # Calculate the CRC32C checksum of the environment data
-    crc = crc32c.crc32c(env_data)
-    
-    # Pack the CRC and environment data together
-    packed_env = struct.pack('<I', crc) + env_data
+    # Create an instance of the U-Boot environment
+    env = uboot.EnvBlob(size=env_size)
 
-    # Write the packed environment to the specified file
-    with open(file_path, 'wb') as f:
-        f.write(packed_env)
+    # Set the environment variables
+    for key, value in env_vars.items():
+        env.set(key, value)
+
+    # Export the environment data
+    env_data = env.export()
+
+    # Check if the environment data is smaller than the specified size
+    if len(env_data) > env_size:
+        raise ValueError("Environment data exceeds the specified size.")
+
+    # Pad the environment data to the desired size
+    padded_env_data = env_data.ljust(env_size, b'\x00')
+
+    # Write the padded environment data to a file
+    with open(env_file_path, 'wb') as f:
+        f.write(padded_env_data)

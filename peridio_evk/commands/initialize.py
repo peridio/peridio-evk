@@ -24,8 +24,8 @@ def initialize(organization_name, organization_prn, api_key, product_name):
         cohort_prns = do_create_product(product_name)
         release_cohort = find_dict_by_name(cohort_prns, 'release')
         release_cohort_prn = release_cohort['prn']
-        do_create_artifacts(organization_prn, release_cohort_prn)
-        do_create_device_environments(devices)
+        release = do_create_artifacts(organization_prn, release_cohort_prn)
+        do_create_device_environments(devices, release)
         updated_devices = do_create_device_certificates(devices, release_cohort['ca'])
         filtered_devices = filter_dicts(updated_devices, 'tags', ['canary'])
         do_register_devices(filtered_devices, product_name, release_cohort_prn)

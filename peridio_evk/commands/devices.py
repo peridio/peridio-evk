@@ -13,16 +13,6 @@ devices = [
     {'identifier': 'EI-ML-0006', 'target': 'arm64-v8', 'tags': []}
 ]
 
-fw_env_config_template = """
-{uboot_env_path} {uboot_env_offset} {uboot_env_size}
-"""
-
-fw_env_default = {
-    'uboot_env_path': '/etc/peridiod/uboot.env',
-    'uboot_env_offset': '0x0000',
-    'uboot_env_size': '0x20000'
-}
-
 peridio_json_template = {
   "version": 1,
   "fwup": {
@@ -38,10 +28,10 @@ peridio_json_template = {
     }
   },
   "node": {
-    "key_pair_source": "env",
+    "key_pair_source": "file",
     "key_pair_config": {
-      "private_key": "PERIDIO_PRIVATE_KEY",
-      "certificate": "PERIDIO_CERTIFICATE"
+      "private_key_path": "/etc/peridiod/device-private-key.pem",
+      "certificate_path": "/etc/peridiod/device-certificate.pem"
     }
   }
 }
@@ -138,7 +128,7 @@ def virtual_devices_stop():
 def virtual_devices_destroy():
     log_task('Destroying Virtual Devices')
 
-def do_create_device_environments(devices):
+def do_create_device_environments(devices, release):
     config_path = get_config_path()
     devices_path = os.path.join(config_path, 'evk-data', 'devices')
     if not os.path.exists(devices_path):
@@ -151,17 +141,18 @@ def do_create_device_environments(devices):
             os.makedirs(device_path)
 
         device_env = {
-            'peridio_release_prn': '1234',
-            'peridio_release_version': '5678'
+            'peridio_release_prn': release['prn'],
+            'peridio_release_version': release['version']
         }
 
         device_env_path = os.path.join(device_path, 'uboot.env')
+        env_size_hex = int('0x20000', 16)
+        create_uboot_env(device_env, device_env_path, env_size_hex)
 
-        create_env_file(device_env, 2048, device_env_path)
-        fw_env_config = fw_env_config_template.format(**fw_env_default)
-        fw_env_path = os.path.join(device_path, 'fw_env.config')
-        with open(fw_env_path, 'w') as file:
-            file.write(fw_env_config)
+        peridio_json = peridio_json_template
+        peridio_json_path = os.path.join(device_path, 'peridio.json')
+        with open(peridio_json_path, 'w') as file:
+            file.write(json.dumps(peridio_json, indent=2))
 
         rat_hooks_path = os.path.join(device_path, 'hooks')
         if not os.path.exists(rat_hooks_path):
