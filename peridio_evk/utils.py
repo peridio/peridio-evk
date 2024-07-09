@@ -216,8 +216,7 @@ def get_podman_client():
         client.info()
         log_info("Using Podman client")
         return client
-    except (podman.errors.APIError, FileNotFoundError) as e:
-        click.echo(f"Podman client error: {e}", err=True)
+    except:
         return None
 
 

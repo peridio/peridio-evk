@@ -120,6 +120,15 @@ if [ "$COUNTER" -le 0 ]; then
 fi
 """
 
+custom_entrypoint = """
+#!/usr/bin/env bash
+ssh-keygen -A
+addgroup "peridio"
+adduser --disabled-password --ingroup "peridio" "peridio"
+echo "peridio:peridio" | chpasswd
+exec "$@"
+"""
+
 @click.command(name='devices-start')
 def devices_start():
     container_client = get_container_client()
@@ -142,12 +151,16 @@ def devices_start():
             volumes = {
                 device_path: {'bind': '/etc/peridiod', 'mode': 'rw'},
             }
-            container = container_client.containers.run(
+            entrypoint = '/etc/peridiod/entrypoint.sh'
+            cmd = ["/opt/peridiod/bin/peridiod", "start_iex"]
+            container_client.containers.run(
                 image_tag,
                 detach=True,
                 volumes=volumes,
                 name=container_name,
-                auto_remove=True
+                auto_remove=True,
+                entrypoint=entrypoint,
+                command=cmd
             )
    
 @click.command(name='devices-stop')
@@ -224,6 +237,9 @@ def do_create_device_environments(devices, release):
         device_env_path = os.path.join(device_path, 'uboot.env')
         env_size_hex = int('0x20000', 16)
         create_uboot_env(device_env, device_env_path, env_size_hex)
+
+        entrypoint_file = os.path.join(device_path, 'entrypoint.sh')
+        write_file_x(entrypoint_file, custom_entrypoint)
 
         peridio_json = peridio_json_template
         peridio_json_path = os.path.join(device_path, 'peridio.json')
