@@ -1,4 +1,8 @@
 import click
+import sys
+import select
+import termios
+import tty
 from log import *
 from utils import *
 from uboot_env import *
@@ -116,17 +120,89 @@ if [ "$COUNTER" -le 0 ]; then
 fi
 """
 
-@click.command()
-def virtual_devices_start():
+@click.command(name='devices-start')
+def devices_start():
+    container_client = get_container_client()
     log_task('Starting Virtual Devices')
+    image_tag = 'peridio/peridiod:latest'
+    log_info(f"Pulling image: {image_tag}")
+    container_client.images.pull(image_tag)
 
-@click.command()
-def virtual_devices_stop():
+    config_path = get_config_path()
+    devices_path = os.path.join(config_path, 'evk-data', 'devices')
+
+    for device in devices:
+        container_name = f'peridio-{device['identifier']}'
+        try:
+            container_client.containers.get(container_name)
+            log_info(f'Device {device['identifier']} container already started')
+        except:
+            log_info(f'Starting Device {device['identifier']}')
+            device_path = os.path.join(devices_path, device['identifier'])
+            volumes = {
+                device_path: {'bind': '/etc/peridiod', 'mode': 'rw'},
+            }
+            container = container_client.containers.run(
+                image_tag,
+                detach=True,
+                volumes=volumes,
+                name=container_name,
+                auto_remove=True
+            )
+   
+@click.command(name='devices-stop')
+def devices_stop():
+    container_client = get_container_client()
     log_task('Stopping Virtual Devices')
+    for device in devices:
+        container_name = f'peridio-{device['identifier']}'
+        try:
+            container = container_client.containers.get(container_name)
+            log_info(f'Stopping {device['identifier']}')
+            container.stop()
+        except:
+            log_info(f'Device {device['identifier']} container already stopped')
 
-@click.command()
-def virtual_devices_destroy():
-    log_task('Destroying Virtual Devices')
+@click.argument('device_identifier')
+@click.command(name='device-attach')
+def device_attach(device_identifier):
+    container_client = get_container_client()
+    try:
+        container = container_client.containers.get(f'peridio-{device_identifier}')
+        log_task(f'Attaching To Container {device_identifier}')
+        exec_id = container_client.api.exec_create(container.id, '/bin/bash', tty=True, stdin=True)['Id']
+        old_tty_settings = termios.tcgetattr(sys.stdin)
+        sock = container_client.api.exec_start(exec_id, tty=True, stream=True, detach=False, socket=True)
+        try:
+            # Set terminal to raw mode
+            tty.setraw(sys.stdin.fileno())
+            log_info("Attached to the container")
+            while True:
+                # Wait for either input from the user or output from the container
+                readable, _, _ = select.select([sys.stdin, sock], [], [])
+                
+                for r in readable:
+                    if r == sys.stdin:
+                        # Read user input and send it to the container's stdin
+                        user_input = os.read(sys.stdin.fileno(), 1024)
+                        sock._sock.send(user_input)
+                    else:
+                        # Read logs from the container and print them
+                        output = sock._sock.recv(1024)
+                        if not output:
+                            return
+                        output_decoded = output.decode('utf-8')
+                        sys.stdout.write(output_decoded)
+                        sys.stdout.flush()
+        finally:
+            # Restore the terminal settings
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty_settings)
+            sock.close()
+
+    except:
+        log_info(f'Device {device_identifier} not running')
+
+
 
 def do_create_device_environments(devices, release):
     config_path = get_config_path()

@@ -1,5 +1,6 @@
 import uboot
 
+
 def create_uboot_env(env_vars, env_file_path, env_size):
     """
     Create a U-Boot environment file with a valid CRC using the uboot Python module and specify the environment size.
@@ -24,8 +25,8 @@ def create_uboot_env(env_vars, env_file_path, env_size):
         raise ValueError("Environment data exceeds the specified size.")
 
     # Pad the environment data to the desired size
-    padded_env_data = env_data.ljust(env_size, b'\x00')
+    padded_env_data = env_data.ljust(env_size, b"\x00")
 
     # Write the padded environment data to a file
-    with open(env_file_path, 'wb') as f:
+    with open(env_file_path, "wb") as f:
         f.write(padded_env_data)
