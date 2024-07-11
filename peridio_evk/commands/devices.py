@@ -120,8 +120,7 @@ if [ "$COUNTER" -le 0 ]; then
 fi
 """
 
-custom_entrypoint = """
-#!/usr/bin/env bash
+custom_entrypoint = """#!/usr/bin/env bash
 ssh-keygen -A
 addgroup "peridio"
 adduser --disabled-password --ingroup "peridio" "peridio"
@@ -133,7 +132,7 @@ exec "$@"
 def devices_start():
     container_client = get_container_client()
     log_task('Starting Virtual Devices')
-    image_tag = 'peridio/peridiod:latest'
+    image_tag = 'docker.io/peridio/peridiod:latest'
     log_info(f"Pulling image: {image_tag}")
     container_client.images.pull(image_tag)
 
@@ -145,23 +144,29 @@ def devices_start():
         try:
             container_client.containers.get(container_name)
             log_info(f'Device {device['identifier']} container already started')
-        except:
+            continue
+        except Exception as e:
             log_info(f'Starting Device {device['identifier']}')
+        try:
             device_path = os.path.join(devices_path, device['identifier'])
-            volumes = {
-                device_path: {'bind': '/etc/peridiod', 'mode': 'rw'},
-            }
-            entrypoint = '/etc/peridiod/entrypoint.sh'
+            volumes = [
+                {'type': 'bind', 'source': device_path, 'target': '/etc/peridiod'},
+            ]
+            entrypoint = ['/etc/peridiod/entrypoint.sh']
             cmd = ["/opt/peridiod/bin/peridiod", "start_iex"]
             container_client.containers.run(
                 image_tag,
                 detach=True,
-                volumes=volumes,
+                mounts=volumes,
                 name=container_name,
                 auto_remove=True,
                 entrypoint=entrypoint,
+                cap_add=["NET_ADMIN"],
+                security_opt=["disable"],
                 command=cmd
             )
+        except Exception as e:
+          log_error(f'error {e}')
    
 @click.command(name='devices-stop')
 def devices_stop():
@@ -183,9 +188,9 @@ def device_attach(device_identifier):
     try:
         container = container_client.containers.get(f'peridio-{device_identifier}')
         log_task(f'Attaching To Container {device_identifier}')
-        exec_id = container_client.api.exec_create(container.id, '/bin/bash', tty=True, stdin=True)['Id']
+        exec_instance = container.exec_run('/bin/bash', tty=True, stream=True, socket=True, detach=False, stdin=True)
         old_tty_settings = termios.tcgetattr(sys.stdin)
-        sock = container_client.api.exec_start(exec_id, tty=True, stream=True, detach=False, socket=True)
+        sock = exec_instance.output
         try:
             # Set terminal to raw mode
             tty.setraw(sys.stdin.fileno())

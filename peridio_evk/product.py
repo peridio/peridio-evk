@@ -100,7 +100,7 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
         sign_end_entity_csr(intermediate_ca_key, intermediate_ca_cert, verification_ca_csr, verification_ca_cert)
         log_modify_file(verification_ca_cert)
 
-        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'create', '--certificate-path', intermediate_ca_cert, '--verification-certificate-path', verification_ca_cert, '--description', f'Intermediate CA: {product_name}:{cohort_name}', '--jitp-cohort-prn', cohort_prn, '--jitp-product-name', product_name, '--jitp-tags', 'JITP', '--jitp-description', 'JITP'])
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'create', '--certificate-path', intermediate_ca_cert, '--verification-certificate-path', verification_ca_cert, '--description', f'Intermediate CA: {product_name}:{cohort_name}', '--jitp-cohort-prn', cohort_prn, '--jitp-product-name', product_name, '--jitp-tags', 'JITP', '--jitp-description', 'JITP', '--jitp-target', 'arm64-v8'])
         if result.returncode != 0:
             log_error(result.stderr)
     else:

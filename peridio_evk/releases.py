@@ -5,24 +5,24 @@ def do_create_artifacts(organization_prn, cohort_prn):
     log_task('Creating Artifacts')
     artifacts_start = [
         {'name': 'edge-inference-os', 'description': 'Edge Inference Product OS', 'version': 'v1.12.1', 'targets': [{'target': 'arm64-v8', 'bytes': 67108864}, {'target': 'x86_64', 'bytes': 69206016}], 
-            "custom_metadata": {"peridiod": {"artifact_handler": "fwup", "artifact_handler_opts": {}, "reboot_required": True}}},
+            "custom_metadata": {"peridiod": {"installer": "fwup", "installer_opts": {"cache_enabled": False}, "reboot_required": True}}},
         {'name': 'edge-inference-service', 'description': 'Edge Inference Service', 'version': 'v1.5.3', 'targets': [{'target': 'arm64-v8', 'bytes': 10485760}, {'target': 'x86_64', 'bytes': 14680064}],
-            "custom_metadata": {"peridiod": {"artifact_handler": "file", "artifact_handler_opts": {"atomic": True, "path": "/opt/edge-inference", "name": "edge-inference-service.img", "reboot_required": False}}}},
+            "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-service.img", "reboot_required": False}}}},
         {'name': 'edge-inference-peripheral', 'description': 'Edge Inference Peripheral Firmware', 'version': 'v1.9.10', 'targets': [{'target': 'arm-cortex-m33', 'bytes': 2097152}],
-            "custom_metadata": {"peridiod": {"artifact_handler": "file", "artifact_handler_opts": {"atomic": True, "path": "/opt/edge-inference", "name": "edge-inference-peripheral.bin", "reboot_required": False}}}},
+            "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-peripheral.bin", "reboot_required": False}}}},
         {'name': 'edge-inference-model', 'description': 'Edge Inference ML Model', 'version': 'v1.4.0', 'targets': [{'target': 'arm-ethos-u65', 'bytes': 33554432}],
-            "custom_metadata": {"peridiod": {"artifact_handler": "file", "artifact_handler_opts": {"atomic": True, "path": "/opt/edge-inference", "name": "edge-inference-model.onnx", "reboot_required": False}}}}
+            "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-model.onnx", "reboot_required": False}}}}
     ]
 
     artifacts_end = [
         {'name': 'edge-inference-os', 'description': 'Edge Inference Product OS', 'version': 'v1.12.1', 'targets': [{'target': 'arm64-v8', 'bytes': 67108864}, {'target': 'x86_64', 'bytes': 69206016}], 
-            "custom_metadata": {"peridiod": {"artifact_handler": "fwup", "artifact_handler_opts": {}, "reboot_required": True}}},
+            "custom_metadata": {"peridiod": {"installer": "fwup", "installer_opts": {"cache_enabled": False}, "reboot_required": True}}},
         {'name': 'edge-inference-service', 'description': 'Edge Inference Service', 'version': 'v2.0.0', 'targets': [{'target': 'arm64-v8', 'bytes': 10486260}, {'target': 'x86_64', 'bytes': 14685064}],
-            "custom_metadata": {"peridiod": {"artifact_handler": "file", "artifact_handler_opts": {"atomic": True, "path": "/opt/edge-inference", "name": "edge-inference-service.img", "reboot_required": False}}}},
+            "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-service.img", "reboot_required": False}}}},
         {'name': 'edge-inference-peripheral', 'description': 'Edge Inference Peripheral Firmware', 'version': 'v1.9.10', 'targets': [{'target': 'arm-cortex-m33', 'bytes': 2097152}],
-            "custom_metadata": {"peridiod": {"artifact_handler": "file", "artifact_handler_opts": {"atomic": True, "path": "/opt/edge-inference", "name": "edge-inference-peripheral.bin", "reboot_required": False}}}},
+            "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-peripheral.bin", "reboot_required": False}}}},
         {'name': 'edge-inference-model', 'description': 'Edge Inference ML Model', 'version': 'v2.1.0', 'targets': [{'target': 'arm-ethos-u65', 'bytes': 43554432}],
-            "custom_metadata": {"peridiod": {"artifact_handler": "file", "artifact_handler_opts": {"atomic": True, "path": "/opt/edge-inference", "name": "edge-inference-model.onnx", "reboot_required": False}}}}
+            "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-model.onnx", "reboot_required": False}}}}
     ]
 
     bundle_start = do_create_artifacts_bundle(artifacts_start, 'r1001', organization_prn)
