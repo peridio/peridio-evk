@@ -23,7 +23,8 @@ def do_create_product(name):
         response = json.loads(result.stdout)
         product_prn = response['product']['prn']
     log_info(f'Product PRN: {product_prn}')
-    return create_product_cohorts(product_prn, name)
+    cohorts = create_product_cohorts(product_prn, name)
+    return cohorts
 
 def create_product_cohorts(product_prn, product_name):
     evk_config = read_evk_config()
@@ -150,7 +151,7 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
     config = read_json_file(config_file)
     update_config_signing_key_pairs(config, f'{cohort_name}-signing-key', signing_key_prn, cohort_private_key_pem)
     write_json_file(config_file, config)
-    {'public_key_pem': cohort_public_key_pem, 'private_key_pem': cohort_private_key_pem}
+    return {'public_key_pem': cohort_public_key_pem, 'private_key_pem': cohort_private_key_pem}
 
 
 def update_config_signing_key_pairs(config, signing_key_pair_name, signing_key_prn, signing_key_private_path):

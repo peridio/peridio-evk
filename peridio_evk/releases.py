@@ -25,12 +25,12 @@ def do_create_artifacts(organization_prn, cohort_prn):
             "custom_metadata": {"peridiod": {"installer": "file", "installer_opts": {"path": "/opt/edge-inference", "name": "edge-inference-model.onnx", "reboot_required": False}}}}
     ]
 
-    bundle_start = do_create_artifacts_bundle(artifacts_start, 'r1001', organization_prn)
-    bundle_end = do_create_artifacts_bundle(artifacts_end, 'r1002', organization_prn)
+    bundle_start, artifacts = do_create_artifacts_bundle(artifacts_start, 'r1001', organization_prn)
+    bundle_end, _artifacts = do_create_artifacts_bundle(artifacts_end, 'r1002', organization_prn)
     
     release_from = do_create_release('release-r1001', organization_prn, cohort_prn, bundle_start, '1.1.0', '', False, [])
     do_create_release('release-r1002', organization_prn, cohort_prn, bundle_end, '2.0.0', '~> 1.1', True, ['canary'])
-    return release_from
+    return release_from, artifacts
 
 def do_create_artifacts_bundle(artifacts, bundle_name, organization_prn):
     for artifact in artifacts:
@@ -49,7 +49,7 @@ def do_create_artifacts_bundle(artifacts, bundle_name, organization_prn):
             response = json.loads(result.stdout)
             artifact_prn = response['artifact']['prn']
             log_info(f'Artifact PRN: {artifact_prn}')
-        
+
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'artifact-versions', 'create', '--artifact-prn', artifact_prn, '--version', artifact['version'], '--description', artifact['version']])
         if result.returncode != 0:
             log_skip_task('Artifact Version Exists')
@@ -80,9 +80,14 @@ def do_create_artifacts_bundle(artifacts, bundle_name, organization_prn):
 
             result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'binaries', 'create', '--artifact-version-prn', artifact_version_prn, '--target', target['target'], '--content-path', artifact_binary_path, '--signing-key-pair', 'release-signing-key'])
             if result.returncode != 0:
-                log_error(result.stderr)
+                response = json.loads(result.stdout)
+                binary_prn = response['binaries'][0]['prn']
+                log_info(f'Binary PRN: {binary_prn}')
             else:
-                log_info(result.stdout)
+                response = json.loads(result.stdout)
+                binary_prn = response['binary']['prn']
+                log_info(f'Binary PRN: {binary_prn}')
+            target['binary_prn'] = binary_prn
 
     result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'bundles', 'create', '--artifact-version-prns', f'{' '.join(artifact_version_prns)}', '--name', bundle_name, '--organization-prn', organization_prn])
     if result.returncode == 0:
@@ -95,7 +100,7 @@ def do_create_artifacts_bundle(artifacts, bundle_name, organization_prn):
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'bundles', 'list', '--search', f'organization_prn:\'{evk_config['organization_prn']}\' and name:\'{bundle_name}\''])
         response = json.loads(result.stdout)
         bundle_prn = response['bundles'][0]['prn']
-    return bundle_prn
+    return bundle_prn, artifacts
 
 def do_create_release(release_name, organization_prn, cohort_prn, bundle_prn, version, version_requirement, disabled, phase_tags):
     log_task('Create Release')
@@ -114,7 +119,7 @@ def do_create_release(release_name, organization_prn, cohort_prn, bundle_prn, ve
     else:
         command.append('--phase-tags')
         command.append(f'{' '.join(phase_tags)}')
-
+    
     result = peridio_cli(command)
     if result.returncode == 0:
         response = json.loads(result.stdout)

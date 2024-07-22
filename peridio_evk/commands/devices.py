@@ -3,6 +3,10 @@ import sys
 import select
 import termios
 import tty
+import uuid
+import json
+import hashlib
+import base64
 from log import *
 from utils import *
 from uboot_env import *
@@ -22,7 +26,10 @@ peridio_json_template = {
   "fwup": {
     "devpath": "/etc/peridiod/peridio.fwup.img",
   },
+  "cache_dir": "/etc/peridiod/cache",
+  "release_poll_enabled": True,
   "remote_shell": True,
+  "targets": ["arm64-v8", "arm-ethos-u65"],
   "remote_access_tunnels": {
     "enabled": True,
     "service_ports": [22],
@@ -222,9 +229,36 @@ def device_attach(device_identifier):
 
 
 
-def do_create_device_environments(devices, release):
+def do_create_device_environments(devices, release, artifacts, cohorts):
     config_path = get_config_path()
     devices_path = os.path.join(config_path, 'evk-data', 'devices')
+
+    device_targets = ['arm64-v8', 'arm-ethos-u65']
+    peridio_bin_installed = ''
+
+    cohort = [cohort for cohort in cohorts if cohort.get('name') == 'release'][0]
+    public_key_pem = cohort['signing_keys']['public_key_pem']
+    public_key_raw = convert_ed25519_public_pem_to_raw(public_key_pem)
+    public_key_raw_encoded = base64.b64encode(public_key_raw).decode('utf-8')
+
+    for artifact in artifacts:
+        sorted_custom_metadata = sort_dict_keys(artifact['custom_metadata'])
+        custom_metadata = json.dumps(sorted_custom_metadata, separators=(',', ':'))
+        log_info(f'Sorted: {custom_metadata}')
+        custom_metadata_bytes = custom_metadata.encode('utf-8')
+        hash_object = hashlib.new('sha256')
+        hash_object.update(custom_metadata_bytes)
+        custom_metadata_hash = hash_object.digest()
+        installed_targets = [target for target in artifact['targets'] if target['target'] in device_targets]
+        for target in installed_targets:
+            binary_uuid = target['binary_prn'].split(':')[-1]
+            log_info(f'binary id: {binary_uuid}')
+            id = uuid.UUID(binary_uuid).bytes
+            peridio_bin_installed = peridio_bin_installed + base64.b16encode(id).lower().decode('utf-8')
+            log_info(f'id: {base64.b16encode(id).lower().decode('utf-8')}')
+            peridio_bin_installed = peridio_bin_installed + base64.b16encode(custom_metadata_hash).lower().decode('utf-8')
+            log_info(f'custom_metadata_hash: {base64.b16encode(custom_metadata_hash).lower().decode('utf-8')}')
+    
     if not os.path.exists(devices_path):
         log_task(f'Creating Device Environments')
         os.makedirs(devices_path)
@@ -235,8 +269,9 @@ def do_create_device_environments(devices, release):
             os.makedirs(device_path)
 
         device_env = {
-            'peridio_release_prn': release['prn'],
-            'peridio_release_version': release['version']
+            'peridio_rel_current': release['prn'],
+            'peridio_vsn_current': release['version'],
+            'peridio_bin_current': peridio_bin_installed
         }
 
         device_env_path = os.path.join(device_path, 'uboot.env')
@@ -247,6 +282,7 @@ def do_create_device_environments(devices, release):
         write_file_x(entrypoint_file, custom_entrypoint)
 
         peridio_json = peridio_json_template
+        peridio_json['trusted_signing_keys'] = [public_key_raw_encoded]
         peridio_json_path = os.path.join(device_path, 'peridio.json')
         with open(peridio_json_path, 'w') as file:
             file.write(json.dumps(peridio_json, indent=2))

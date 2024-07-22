@@ -265,3 +265,13 @@ def get_container_client():
     # If neither Podman nor Docker is installed, raise an exception
     log_error("Podman or Docker need to be running to start device containers")
     sys.exit()
+
+def sort_dict_keys(d):
+    if isinstance(d, dict):
+        # Recursively sort the dictionary
+        return {k: sort_dict_keys(v) for k, v in sorted(d.items())}
+    elif isinstance(d, list):
+        # Recursively sort each element in the list
+        return [sort_dict_keys(item) for item in d]
+    else:
+        return d

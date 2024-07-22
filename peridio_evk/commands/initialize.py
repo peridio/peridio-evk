@@ -51,8 +51,8 @@ def initialize(organization_name, organization_prn, api_key, product_name):
         cohort_prns = do_create_product(product_name)
         release_cohort = find_dict_by_name(cohort_prns, "release")
         release_cohort_prn = release_cohort["prn"]
-        release = do_create_artifacts(organization_prn, release_cohort_prn)
-        do_create_device_environments(devices, release)
+        release, artifacts = do_create_artifacts(organization_prn, release_cohort_prn)
+        do_create_device_environments(devices, release, artifacts, cohort_prns)
         updated_devices = do_create_device_certificates(
             devices, release_cohort["ca"]
         )
