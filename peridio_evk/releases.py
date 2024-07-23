@@ -1,5 +1,5 @@
-from utils import *
-from log import *
+from peridio_evk.utils import *
+from peridio_evk.log import *
 
 def do_create_artifacts(organization_prn, cohort_prn):
     log_task('Creating Artifacts')

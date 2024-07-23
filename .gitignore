@@ -5,3 +5,5 @@ env/
 *.egg-info
 *.egg
 .installed.cfg
+build/
+dist/

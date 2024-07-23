@@ -7,10 +7,10 @@ import uuid
 import json
 import hashlib
 import base64
-from log import *
-from utils import *
-from uboot_env import *
-from crypto import *
+from peridio_evk.log import *
+from peridio_evk.utils import *
+from peridio_evk.uboot_env import *
+from peridio_evk.crypto import *
 
 devices = [
     {'identifier': 'EI-ML-0001', 'target': 'arm64-v8', 'tags': ['canary']},

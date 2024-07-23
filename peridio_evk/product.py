@@ -1,9 +1,9 @@
 import json
 import os
 import base64
-from utils import *
-from log import *
-from crypto import *
+from peridio_evk.utils import *
+from peridio_evk.log import *
+from peridio_evk.crypto import *
 
 def do_create_product(name):
     log_task('Creating product')

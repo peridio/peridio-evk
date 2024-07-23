@@ -9,7 +9,7 @@ import threading
 import stat
 import sys
 from datetime import datetime
-from log import (
+from peridio_evk.log import (
     log_cli_command,
     log_cli_response,
     log_modify_file,

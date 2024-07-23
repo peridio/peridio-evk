@@ -1,10 +1,10 @@
 import click
 import os
-from utils import *
-from crypto import create_root_ca
-from log import log_task, log_modify_file, log_info, log_skip_task
-from product import do_create_product
-from releases import do_create_artifacts
+from peridio_evk.utils import *
+from peridio_evk.crypto import create_root_ca
+from peridio_evk.log import log_task, log_modify_file, log_info, log_skip_task
+from peridio_evk.product import do_create_product
+from peridio_evk.releases import do_create_artifacts
 from peridio_evk.commands.devices import (
     do_create_device_environments,
     do_create_device_certificates,

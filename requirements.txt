@@ -1,6 +1,0 @@
-cryptography
-click
-crc32c
-uboot
-docker
-podman
