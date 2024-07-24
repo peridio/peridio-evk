@@ -136,13 +136,24 @@ exec "$@"
 """
 
 @click.command(name='devices-start')
-def devices_start():
+@click.option(
+    "--tag",
+    required=False,
+    type=str,
+    default="latest",
+    help="peridiod image tag (Optional)",
+)
+def devices_start(tag):
     container_client = get_container_client()
     log_task('Starting Virtual Devices')
-    image_tag = 'docker.io/peridio/peridiod:latest'
+    image_tag = f'docker.io/peridio/peridiod:{tag}'
     log_info(f"Pulling image: {image_tag}")
-    container_client.images.pull(image_tag)
-
+    image = container_client.images.pull(image_tag)
+    
+    if not bool(image.id):
+        log_error("Invalid Image Tag")
+        return
+     
     config_path = get_config_path()
     devices_path = os.path.join(config_path, 'evk-data', 'devices')
 
