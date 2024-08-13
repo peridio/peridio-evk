@@ -170,14 +170,20 @@ def devices_start(tag):
             volumes = [
                 {'type': 'bind', 'source': device_path, 'target': '/etc/peridiod'},
             ]
+            env_vars = {
+                "PERIDIO_LOG_LEVEL": "debug"
+            }
             entrypoint = ['/etc/peridiod/entrypoint.sh']
             cmd = ["/opt/peridiod/bin/peridiod", "start_iex"]
             container_client.containers.run(
                 image_tag,
+                stdin_open=True,
+                tty=True,
                 detach=True,
                 mounts=volumes,
                 name=container_name,
                 auto_remove=True,
+                environment=env_vars,
                 entrypoint=entrypoint,
                 cap_add=["NET_ADMIN"],
                 security_opt=["disable"],
