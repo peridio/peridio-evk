@@ -136,6 +136,8 @@ echo "peridio:peridio" | chpasswd
 exec "$@"
 """
 
+fw_env = "/etc/peridiod/uboot.env 0x0000 0x20000"
+
 @click.command(name='devices-start')
 @click.option(
     "--tag",
@@ -295,6 +297,12 @@ def do_create_device_environments(devices, release, artifacts, cohorts):
         device_env_path = os.path.join(device_path, 'uboot.env')
         env_size_hex = int('0x20000', 16)
         create_uboot_env(device_env, device_env_path, env_size_hex)
+
+        device_fw_env_config = os.path.join(device_path, 'fw_env.config')
+        with open(device_fw_env_config, "w") as fw_env_config:
+            fw_env_config.write(
+                fw_env
+            )
 
         entrypoint_file = os.path.join(device_path, 'entrypoint.sh')
         write_file_x(entrypoint_file, custom_entrypoint)
