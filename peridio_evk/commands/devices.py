@@ -28,6 +28,7 @@ peridio_json_template = {
   },
   "cache_dir": "/etc/peridiod/cache",
   "release_poll_enabled": True,
+  "release_poll_interval": 5000,
   "remote_shell": True,
   "targets": ["arm64-v8", "arm-ethos-u65"],
   "remote_access_tunnels": {
@@ -149,11 +150,11 @@ def devices_start(tag):
     image_tag = f'docker.io/peridio/peridiod:{tag}'
     log_info(f"Pulling image: {image_tag}")
     image = container_client.images.pull(image_tag)
-    
+
     if not bool(image.id):
         log_error("Invalid Image Tag")
         return
-     
+
     config_path = get_config_path()
     devices_path = os.path.join(config_path, 'evk-data', 'devices')
 
@@ -191,7 +192,7 @@ def devices_start(tag):
             )
         except Exception as e:
           log_error(f'error {e}')
-   
+
 @click.command(name='devices-stop')
 def devices_stop():
     container_client = get_container_client()
@@ -222,7 +223,7 @@ def device_attach(device_identifier):
             while True:
                 # Wait for either input from the user or output from the container
                 readable, _, _ = select.select([sys.stdin, sock], [], [])
-                
+
                 for r in readable:
                     if r == sys.stdin:
                         # Read user input and send it to the container's stdin
@@ -275,11 +276,11 @@ def do_create_device_environments(devices, release, artifacts, cohorts):
             log_info(f'id: {base64.b16encode(id).lower().decode('utf-8')}')
             peridio_bin_installed = peridio_bin_installed + base64.b16encode(custom_metadata_hash).lower().decode('utf-8')
             log_info(f'custom_metadata_hash: {base64.b16encode(custom_metadata_hash).lower().decode('utf-8')}')
-    
+
     if not os.path.exists(devices_path):
         log_task(f'Creating Device Environments')
         os.makedirs(devices_path)
-    
+
     for device in devices:
         device_path = os.path.join(devices_path, device['identifier'])
         if not os.path.exists(device_path):
@@ -307,7 +308,7 @@ def do_create_device_environments(devices, release, artifacts, cohorts):
         rat_hooks_path = os.path.join(device_path, 'hooks')
         if not os.path.exists(rat_hooks_path):
             os.makedirs(rat_hooks_path)
-        
+
         pre_up_path = os.path.join(rat_hooks_path, 'pre-up.sh')
         write_file_x(pre_up_path, peridio_rat_pre_up)
 
@@ -320,7 +321,7 @@ def do_create_device_certificates(devices, signer_ca):
     if not os.path.exists(devices_path):
         log_task(f'Creating Device Environments')
         os.makedirs(devices_path)
-     
+
     for device in devices:
         device_path = os.path.join(devices_path, device['identifier'])
         device_key = os.path.join(device_path, 'device-private-key.pem')
@@ -334,7 +335,7 @@ def do_create_device_certificates(devices, signer_ca):
             log_modify_file(device_cert)
         device['certificate'] = device_cert
         device['private_key'] = device_key
-    
+
     return devices
 
 def do_register_devices(devices, product_name, cohort_prn):
@@ -348,7 +349,7 @@ def do_register_devices(devices, product_name, cohort_prn):
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'devices', 'create', '--identifier', device['identifier'], '--product-name', product_name, '--cohort-prn', cohort_prn, '--tags', f'{' '.join(device['tags'])}', '--target', device['target']])
         if result.returncode != 0:
             log_skip_task('Device already exists')
-        
+
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'device-certificates', 'create', '--device-identifier', device['identifier'], '--product-name', product_name, '--certificate-path', device['certificate']])
         if result.returncode != 0:
             log_skip_task('Device certificate already exists')
