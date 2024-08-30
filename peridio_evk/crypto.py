@@ -29,7 +29,7 @@ def create_root_ca(common_name, key_path, cert_path):
         .issuer_name(issuer)
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.utcnow())
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
         .not_valid_after(
             # Certificate is valid for 31 years
             datetime.utcnow()
@@ -106,7 +106,7 @@ def sign_intermediate_ca_csr(
         .issuer_name(root_cert.subject)
         .public_key(intermediate_csr.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.utcnow())
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
         .not_valid_after(
             # Certificate is valid for 10 years
             datetime.utcnow()
@@ -198,7 +198,7 @@ def sign_end_entity_csr(
         .issuer_name(intermediate_cert.subject)
         .public_key(end_entity_csr.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.utcnow())
+        .not_valid_before(datetime.utcnow() - timedelta(days=1))
         .not_valid_after(
             # Certificate is valid for 1 year
             datetime.utcnow()

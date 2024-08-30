@@ -15,7 +15,7 @@ def do_create_product(name):
         response = json.loads(result.stderr)
         if "has already been taken" in response['data']['params']['name']:
             log_skip_task('Product already exists')
-        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products-v2', 'list', '--search', f'organization_prn:\'{evk_config['organization_prn']}\' and name:\'{name}\''])
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products-v2', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and name:\'{name}\''])
         if result.returncode == 0:
             response = json.loads(result.stdout)
             product_prn = response['products'][0]['prn']
@@ -44,7 +44,7 @@ def create_product_cohorts(product_prn, product_name):
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'create', '--name', cohort, '--description', desc, '--organization-prn', evk_config['organization_prn'], '--product-prn', product_prn])
         if result.returncode != 0:
             log_skip_task('Cohort already exists')
-            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'list', '--search', f'organization_prn:\'{evk_config['organization_prn']}\' and name:\'{cohort}\''])
+            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and name:\'{cohort}\''])
             if result.returncode == 0:
                 response = json.loads(result.stdout)
                 cohort_prn = response['cohorts'][0]['prn']
@@ -101,6 +101,8 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
         sign_end_entity_csr(intermediate_ca_key, intermediate_ca_cert, verification_ca_csr, verification_ca_cert)
         log_modify_file(verification_ca_cert)
 
+        print(intermediate_ca_cert)
+
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'create', '--certificate-path', intermediate_ca_cert, '--verification-certificate-path', verification_ca_cert, '--description', f'Intermediate CA: {product_name}:{cohort_name}', '--jitp-cohort-prn', cohort_prn, '--jitp-product-name', product_name, '--jitp-tags', 'JITP', '--jitp-description', 'JITP', '--jitp-target', 'arm64-v8'])
         if result.returncode != 0:
             log_error(result.stderr)
@@ -131,7 +133,7 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
 
     public_key_raw = convert_ed25519_public_pem_to_raw(cohort_public_key_pem)
     public_key_raw_encoded = base64.b64encode(public_key_raw).decode('utf-8')
-    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'list', '--search', f'organization_prn:\'{evk_config['organization_prn']}\' and value:\'{public_key_raw_encoded}\''])
+    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and value:\'{public_key_raw_encoded}\''])
     if result.returncode == 0:
         response = json.loads(result.stdout)
         if response['signing_keys'] == []:
