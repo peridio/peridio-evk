@@ -1,6 +1,7 @@
+import base64
 import json
 import os
-import base64
+import sys
 from peridio_evk.utils import *
 from peridio_evk.log import *
 from peridio_evk.crypto import *
@@ -30,9 +31,9 @@ def create_product_cohorts(product_prn, product_name):
     evk_config = read_evk_config()
     log_task(f'Creating Product Cohorts')
     cohorts = [
-        ('release', 'This cohort is for devices running stable, production-ready firmware releases that are suitable for end-users or wider deployment.'), 
-        ('release-debug', 'Devices in this cohort run release candidate builds with debugging features enabled, allowing for more in-depth testing and issue diagnosis in a near-production environment.'), 
-        ('daily-release', 'This cohort is for devices running daily release builds, which are more stable than debug builds but still updated frequently for testing and validation purposes.'), 
+        ('release', 'This cohort is for devices running stable, production-ready firmware releases that are suitable for end-users or wider deployment.'),
+        ('release-debug', 'Devices in this cohort run release candidate builds with debugging features enabled, allowing for more in-depth testing and issue diagnosis in a near-production environment.'),
+        ('daily-release', 'This cohort is for devices running daily release builds, which are more stable than debug builds but still updated frequently for testing and validation purposes.'),
         ('daily-debug', 'This cohort is used for devices that run daily debug builds, typically used by developers for active development and testing.')
     ]
 
@@ -55,7 +56,7 @@ def create_product_cohorts(product_prn, product_name):
         signing_keys = create_cohort_signing_key(cohort, cohort_prn)
         cohort_prns.append({'name': cohort, 'prn': cohort_prn, 'signing_keys': signing_keys, 'ca': ca})
     return cohort_prns
-    
+
 def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
     config_path = get_config_path()
     evk_config = read_evk_config()
@@ -90,7 +91,7 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
             response = json.loads(result.stdout)
             verification_code = response['data']['verification_code']
             log_info(f'Verification Code: {verification_code}')
-        
+
         log_task(f'Signing Verification Certificate')
         verification_ca_key = os.path.join(intermediate_ca_path, 'verification-private-key.pem')
         verification_ca_csr = os.path.join(intermediate_ca_path, 'verification-signing-request.pem')
@@ -108,7 +109,7 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
             log_error(result.stderr)
     else:
         log_skip_task(f'Intermediate CA Already Registered')
-    
+
     return {'certificate': intermediate_ca_cert, 'private_key': intermediate_ca_key}
 
 def create_cohort_signing_key(cohort_name, cohort_prn):
@@ -134,24 +135,31 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
     public_key_raw = convert_ed25519_public_pem_to_raw(cohort_public_key_pem)
     public_key_raw_encoded = base64.b64encode(public_key_raw).decode('utf-8')
     result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and value:\'{public_key_raw_encoded}\''])
+    signing_key_name = f'{cohort_name}-signing-key'
+
     if result.returncode == 0:
         response = json.loads(result.stdout)
         if response['signing_keys'] == []:
             log_task(f'Registering Binary Signing Key')
-            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'create', '--organization-prn', evk_config['organization_prn'], '--value', public_key_raw_encoded, '--name', f'{cohort_name}-signing-key'])
+            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'create', '--organization-prn', evk_config['organization_prn'], '--value', public_key_raw_encoded, '--name', signing_key_name])
+
             if result.returncode == 0:
                 response = json.loads(result.stdout)
                 signing_key_prn = response['signing_key']['prn']
+            else:
+                log_error(f'A signing key named \'{signing_key_name}\' already exists in Peridio CLoud, please either rename or remove the pre-existing key via Web Console, CLI, or API.')
+                sys.exit()
+
         else:
             log_skip_task(f'Binary Signing Key Already Registered')
             signing_key_prn = response['signing_keys'][0]['prn']
     else:
         log_error(result.stderr)
-    
+
     log_task(f'Adding Signing Key to CLI Keychain')
     config_file = os.path.join(config_path, 'config.json')
     config = read_json_file(config_file)
-    update_config_signing_key_pairs(config, f'{cohort_name}-signing-key', signing_key_prn, cohort_private_key_pem)
+    update_config_signing_key_pairs(config, signing_key_name, signing_key_prn, cohort_private_key_pem)
     write_json_file(config_file, config)
     return {'public_key_pem': cohort_public_key_pem, 'private_key_pem': cohort_private_key_pem}
 
