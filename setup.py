@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="peridio_evk",
-    version="0.1.5",
+    version="0.1.6",
     author="Peridio Developers",
     author_email="support@peridio.com",
     description="The Peridio Evaluation Kit",
