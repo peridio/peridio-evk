@@ -28,7 +28,7 @@ peridio_json_template = {
   },
   "cache_dir": "/etc/peridiod/cache",
   "release_poll_enabled": True,
-  "release_poll_interval": 30000,
+  "release_poll_interval": 5000,
   "remote_shell": True,
   "targets": ["arm64-v8", "arm-ethos-u65"],
   "remote_access_tunnels": {
