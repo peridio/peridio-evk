@@ -16,7 +16,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     include_package_data=True,
-    install_requires=["click", "cryptography", "uboot", "docker", "podman"],
+    install_requires=["click", "cryptography", "uboot", "docker"],
     entry_points={
         "console_scripts": [
             "peridio-evk = peridio_evk.cli:cli",
