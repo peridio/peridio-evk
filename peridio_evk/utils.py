@@ -207,19 +207,6 @@ def filter_dicts(dict_list, key, value):
     ]
 
 
-def get_podman_client():
-    try:
-        import podman
-
-        client = podman.PodmanClient()
-        # Test the connection to Podman service
-        client.info()
-        log_info("Using Podman client")
-        return client
-    except:
-        return None
-
-
 def get_docker_client():
     try:
         import docker
@@ -234,20 +221,6 @@ def get_docker_client():
 
 
 def get_container_client():
-    # Check if Podman is installed
-    try:
-        subprocess.run(
-            ["podman", "--version"],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        client = get_podman_client()
-        if client:
-            return client
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-
     # Check if Docker is installed
     try:
         subprocess.run(
@@ -262,8 +235,7 @@ def get_container_client():
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
-    # If neither Podman nor Docker is installed, raise an exception
-    log_error("Podman or Docker need to be running to start device containers")
+    log_error("Docker needs to be running to start device containers")
     sys.exit()
 
 def sort_dict_keys(d):
