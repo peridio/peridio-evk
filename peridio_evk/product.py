@@ -11,12 +11,12 @@ def do_create_product(name):
     log_info(f'Product Name: {name}')
 
     evk_config = read_evk_config()
-    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products-v2', 'create', '--name', name, '--organization-prn', evk_config['organization_prn']])
+    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products', 'create', '--name', name, '--organization-prn', evk_config['organization_prn']])
     if result.returncode != 0:
         response = json.loads(result.stderr)
         if "has already been taken" in response['data']['params']['name']:
             log_skip_task('Product already exists')
-        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products-v2', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and name:\'{name}\''])
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'products', 'list', '--search', f'name:\'{name}\''])
         if result.returncode == 0:
             response = json.loads(result.stdout)
             product_prn = response['products'][0]['prn']
@@ -45,7 +45,7 @@ def create_product_cohorts(product_prn, product_name):
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'create', '--name', cohort, '--description', desc, '--organization-prn', evk_config['organization_prn'], '--product-prn', product_prn])
         if result.returncode != 0:
             log_skip_task('Cohort already exists')
-            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and name:\'{cohort}\''])
+            result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'cohorts', 'list', '--search', f'name:\'{cohort}\''])
             if result.returncode == 0:
                 response = json.loads(result.stdout)
                 cohort_prn = response['cohorts'][0]['prn']
@@ -83,13 +83,15 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
 
     log_task(f'Registering Intermediate CA')
     ca_certificate_serial = str(read_ca_serial_number(intermediate_ca_cert))
-    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'get', '--ca-certificate-serial', ca_certificate_serial])
-    if result.returncode != 0:
+    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'list', '--search', f'description~\'Serial: {ca_certificate_serial}\''])
+    response = json.loads(result.stdout)
+    ca_certificate_exists = len(response['ca_certificates']) == 1
+    if not ca_certificate_exists:
         log_task(f'Generating CA Certificate Verification Code')
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'create-verification-code'])
         if result.returncode == 0:
             response = json.loads(result.stdout)
-            verification_code = response['data']['verification_code']
+            verification_code = response['verification_code']
             log_info(f'Verification Code: {verification_code}')
 
         log_task(f'Signing Verification Certificate')
@@ -104,9 +106,14 @@ def create_product_cohort_ca(product_name, cohort_name, cohort_prn):
 
         print(intermediate_ca_cert)
 
-        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'ca-certificates', 'create', '--certificate-path', intermediate_ca_cert, '--verification-certificate-path', verification_ca_cert, '--description', f'Intermediate CA: {product_name}:{cohort_name}', '--jitp-cohort-prn', cohort_prn, '--jitp-product-name', product_name, '--jitp-tags', 'JITP', '--jitp-description', 'JITP', '--jitp-target', 'arm64-v8'])
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'],
+                              'ca-certificates', 'create', '--certificate-path',
+                              intermediate_ca_cert, '--verification-certificate-path',
+                              verification_ca_cert, '--description', f'Intermediate CA: {product_name}:{cohort_name}. Serial: {ca_certificate_serial}'])
+                              # '--jitp-cohort-prn', cohort_prn, '--jitp-product-name', product_name, '--jitp-tags', 'JITP', '--jitp-description', 'JITP', '--jitp-target', 'arm64-v8'])
         if result.returncode != 0:
             log_error(result.stderr)
+            sys.exit()
     else:
         log_skip_task(f'Intermediate CA Already Registered')
 
@@ -134,7 +141,7 @@ def create_cohort_signing_key(cohort_name, cohort_prn):
 
     public_key_raw = convert_ed25519_public_pem_to_raw(cohort_public_key_pem)
     public_key_raw_encoded = base64.b64encode(public_key_raw).decode('utf-8')
-    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'list', '--search', f'organization_prn:\'{evk_config["organization_prn"]}\' and value:\'{public_key_raw_encoded}\''])
+    result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'signing-keys', 'list', '--search', f'value:\'{public_key_raw_encoded}\''])
     signing_key_name = f'{cohort_name}-signing-key'
 
     if result.returncode == 0:

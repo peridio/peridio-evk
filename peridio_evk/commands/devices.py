@@ -354,7 +354,10 @@ def do_register_devices(devices, product_name, cohort_prn):
         log_info(f'Device Certificate: {device["certificate"]}')
         log_info(f'Device Private Key: {device["private_key"]}')
 
-        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'devices', 'create', '--identifier', device['identifier'], '--product-name', product_name, '--cohort-prn', cohort_prn, '--tags', f'{" ".join(device["tags"])}', '--target', device["target"]])
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'devices',
+                              'create', '--identifier', device['identifier'],
+                              '--product-name', product_name, '--cohort-prn',
+                              cohort_prn, '--tags', f'{",".join(device["tags"])}', '--target', device["target"]])
         if result.returncode != 0:
             log_skip_task('Device already exists')
 
