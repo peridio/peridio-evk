@@ -48,7 +48,7 @@ def initialize(organization_name, organization_prn, api_key, product_name):
         default=False,
     ):
         do_initialize(organization_name, organization_prn, api_key)
-        cohort_prns = do_create_product(product_name)
+        product_prn, cohort_prns = do_create_product(product_name)
         release_cohort = find_dict_by_name(cohort_prns, "release")
         release_cohort_prn = release_cohort["prn"]
         release, artifacts = do_create_artifacts(organization_prn, release_cohort_prn)
@@ -57,7 +57,7 @@ def initialize(organization_name, organization_prn, api_key, product_name):
             devices, release_cohort["ca"]
         )
         filtered_devices = filter_dicts(updated_devices, "tags", ["canary"])
-        do_register_devices(filtered_devices, product_name, release_cohort_prn)
+        do_register_devices(filtered_devices, product_prn, release_cohort_prn)
 
 
 def do_initialize(organization_name, organization_prn, api_key):
