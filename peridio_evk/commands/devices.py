@@ -346,7 +346,7 @@ def do_create_device_certificates(devices, signer_ca):
 
     return devices
 
-def do_register_devices(devices, product_name, cohort_prn):
+def do_register_devices(devices, product_prn, cohort_prn):
     evk_config = read_evk_config()
     for device in devices:
         log_task(f'Registering Device')
@@ -356,11 +356,24 @@ def do_register_devices(devices, product_name, cohort_prn):
 
         result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'devices',
                               'create', '--identifier', device['identifier'],
-                              '--product-name', product_name, '--cohort-prn',
+                              '--product-prn', product_prn, '--cohort-prn',
                               cohort_prn, '--tags', f'{",".join(device["tags"])}', '--target', device["target"]])
         if result.returncode != 0:
             log_skip_task('Device already exists')
+            result = peridio_cli(['peridio', '--profile', evk_config['profile'],
+                                  'devices', 'list', '--search',
+                                  f'identifier:\'{device['identifier']}\''])
+            response = json.loads(result.stdout)
+            if len(response['devices']) == 1:
+                device_prn = response['devices'][0]['prn']
+            else:
+                sys.exit()
+        else:
+            response = json.loads(result.stdout)
+            device_prn = response['device']['prn']
 
-        result = peridio_cli(['peridio', '--profile', evk_config['profile'], 'device-certificates', 'create', '--device-identifier', device['identifier'], '--product-name', product_name, '--certificate-path', device['certificate']])
+        result = peridio_cli(['peridio', '--profile', evk_config['profile'],
+                              'device-certificates', 'create', '--device-prn',
+                              device_prn, '--certificate-path', device['certificate']])
         if result.returncode != 0:
             log_skip_task('Device certificate already exists')

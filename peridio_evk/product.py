@@ -25,7 +25,7 @@ def do_create_product(name):
         product_prn = response['product']['prn']
     log_info(f'Product PRN: {product_prn}')
     cohorts = create_product_cohorts(product_prn, name)
-    return cohorts
+    return product_prn, cohorts
 
 def create_product_cohorts(product_prn, product_name):
     evk_config = read_evk_config()
